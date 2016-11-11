@@ -1,0 +1,11 @@
+/*
+!/.gitignore
+!/LICENSE.txt
+!/README.md
+!/README.src.md
+!/src
+~*
+*.cache
+*.egg-info
+*.pyc
+__pycache__
