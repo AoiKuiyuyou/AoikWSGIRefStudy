@@ -12,5 +12,7 @@ Tested working with:
 
 Trace call using [AoikTraceCall](https://github.com/AoiKuiyuyou/AoikTraceCall):
 - [WSGIRequestHandlerTraceCall.py](/src/WSGIRequestHandlerTraceCall.py)
-- [WSGIRequestHandlerTraceCallLog.txt](/src/WSGIRequestHandlerTraceCallLog.txt?raw=True)
-- [WSGIRequestHandlerTraceCallNotes.txt](/src/WSGIRequestHandlerTraceCallNotes.txt?raw=True)
+- [WSGIRequestHandlerTraceCallLogPy2.txt](/src/WSGIRequestHandlerTraceCallLogPy2.txt?raw=True)
+- [WSGIRequestHandlerTraceCallLogPy3.txt](/src/WSGIRequestHandlerTraceCallLogPy3.txt?raw=True)
+- [WSGIRequestHandlerTraceCallNotesPy2.txt](/src/WSGIRequestHandlerTraceCallNotesPy2.txt?raw=True)
+- [WSGIRequestHandlerTraceCallNotesPy3.txt](/src/WSGIRequestHandlerTraceCallNotesPy3.txt?raw=True)
