@@ -1,7 +1,3 @@
-# This notes are based on Python 3's `wsgiref` library.
-# The general procedure applies to Python 2's `wsgiref` library as well.
-
-
 # ----- Main function -----
 __main__.main
 
@@ -20,23 +16,26 @@ __main__.main
             # ----- Call `server_bind` -----
             wsgiref.simple_server.WSGIServer.server_bind
 
-                # ----- Call `TCPServer.server_bind` -----
-                wsgiref.simple_server.WSGIServer.server_bind -> socketserver.TCPServer.server_bind
+                # ----- Call super method -----
+                wsgiref.simple_server.WSGIServer.server_bind -> http.server.HTTPServer.server_bind
 
-                    # ----- Bind socket to server address
-                    socket.socket.bind -> _socket.socket.bind
+                    # ----- Call super method -----
+                    wsgiref.simple_server.WSGIServer.server_bind -> socketserver.TCPServer.server_bind
+
+                        # ----- Bind socket to server address
+                        socket.socket.bind -> _socket.socket.bind
 
                 # ----- Call `setup_environ` -----
                 wsgiref.simple_server.WSGIServer.setup_environ
 
-                    # ----- Set `base_environ` -----
-                    wsgiref.simple_server.WSGIServer.__setattr__ -> builtins.object.__setattr__ => ( name='base_environ'
-
             # ----- Call `server_activate` -----
             wsgiref.simple_server.WSGIServer.server_activate -> socketserver.TCPServer.server_activate
 
-                # ----- Start listening -----
+                # ----- Start listening socket -----
                 socket.socket.listen -> _socket.socket.listen
+
+        # ----- Call `set_app` -----
+        wsgiref.simple_server.WSGIServer.set_app
 
     # ----- Call `serve_forever` -----
     wsgiref.simple_server.WSGIServer.serve_forever -> socketserver.BaseServer.serve_forever
@@ -44,7 +43,7 @@ __main__.main
         # ----- Create selector -----
         selectors.SelectSelector.__init__
 
-        # ----- Register socket file to selector -----
+        # ----- Register listening socket to selector -----
         selectors.SelectSelector.register
 
         # ----- Loop to poll listening socket's read event -----
@@ -71,10 +70,10 @@ __main__.main
                 # ----- Call `get_request` -----
                 wsgiref.simple_server.WSGIServer.get_request
 
-                    # ----- Accept client socket FD and client address -----
+                    # ----- Accept the connecting socket -----
                     socket.socket.accept
 
-                        # ----- Wrap client socket FD in a socket object -----
+                        # ----- Wrap the accepted socket's file descriptor in a socket object -----
                         socket.socket.__init__
 
                 # ----- Call `verify_request` -----
@@ -87,16 +86,8 @@ __main__.main
                     wsgiref.simple_server.WSGIServer.finish_request -> socketserver.BaseServer.finish_request
 
                         # ----- Create `self.RequestHandlerClass` instance -----
-                        #
-                        # `self.RequestHandlerClass` is injected when calling
-                        # `wsgiref.simple_server.WSGIServer.__init__` inside
-                        # `wsgiref.simple_server.make_server`.
-                        #
-                        # The class constructor should take three arguments:
-                        # socket object, client address tuple, server object.
-                        #
-                        # `self.RequestHandlerClass` is `wsgiref.simple_server.WSGIRequestHandler`
-                        # in this example.
+                        # In this example, `self.RequestHandlerClass` is
+                        # `wsgiref.simple_server.WSGIRequestHandler`
                         #
                         wsgiref.simple_server.WSGIRequestHandler.__init__ -> socketserver.BaseRequestHandler.__init__
 
@@ -106,13 +97,13 @@ __main__.main
                                 # ----- Create input file from the socket -----
                                 socket.socket.makefile
 
-                                    # ----- Wrap the socket in SocketIO object -----
+                                    # ----- Wrap the socket in `SocketIO` -----
                                     socket.SocketIO.__init__
 
                                 # ----- Create output file from the socket -----
                                 socket.socket.makefile
 
-                                    # ----- Wrap the socket in SocketIO object -----
+                                    # ----- Wrap the socket in `SocketIO` -----
                                     socket.SocketIO.__init__
 
                             # ----- Call `handle` -----
@@ -133,11 +124,8 @@ __main__.main
                                 # ----- Get the environ dict to be passed to `wsgiref.simple_server.ServerHandler` -----
                                 wsgiref.simple_server.WSGIRequestHandler.get_environ
 
-                                # ----- Create `wsgiref.simple_server.ServerHandler` -----
+                                # ----- Create WSGI server handler -----
                                 wsgiref.simple_server.ServerHandler.__init__ -> wsgiref.handlers.SimpleHandler.__init__
-
-                                # ----- Set `request_handler` -----
-                                wsgiref.simple_server.ServerHandler.__setattr__ -> builtins.object.__setattr__ => ( name='request_handler'
 
                                 # ----- Get WSGI application  -----
                                 wsgiref.simple_server.WSGIServer.get_app
@@ -151,13 +139,13 @@ __main__.main
                                     # ----- Call WSGI application -----
                                     __main__.CustomApp
 
-                                        # ----- Send response status line and headers -----
+                                        # ----- Read request body -----
+                                        _io.BufferedReader.read
+
+                                        # ----- Set response status line and headers -----
                                         wsgiref.simple_server.ServerHandler.start_response -> wsgiref.handlers.BaseHandler.start_response
 
-                                        # ----- Return response body -----
-
-                                    # ----- Set `result` -----
-                                    wsgiref.simple_server.ServerHandler.__setattr__ -> builtins.object.__setattr__ => ( name='result'
+                                        # ----- Return response body generator -----
 
                                 # ----- Call `finish_response` -----
                                 wsgiref.simple_server.ServerHandler.finish_response -> wsgiref.handlers.BaseHandler.finish_response
@@ -217,13 +205,13 @@ __main__.main
                                 socket.SocketIO.close
 
                     # ----- Call `shutdown_request` -----
-                    wsgiref.simple_server.WSGIServer.shutdown_request
+                    wsgiref.simple_server.WSGIServer.shutdown_request -> SocketServer.TCPServer.shutdown_request
 
-                        # ----- Send `SHUT_WR` to client -----
+                        # ----- Close write channel -----
                         socket.socket.shutdown -> _socket.socket.shutdown
 
                         # ----- Call `close_request` -----
-                        wsgiref.simple_server.WSGIServer.close_request
+                        wsgiref.simple_server.WSGIServer.close_request -> SocketServer.TCPServer.close_request
 
                             # ----- Close socket -----
                             socket.socket.close
