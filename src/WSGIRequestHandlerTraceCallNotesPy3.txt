@@ -5,10 +5,10 @@ __main__.main
     wsgiref.simple_server.make_server
 
         # ----- Create `TCPServer` -----
-        wsgiref.simple_server.WSGIServer.__init__ -> socketserver.TCPServer.__init__
+        wsgiref.simple_server.WSGIServer -> socketserver.TCPServer.__init__
 
-            # ----- Call super constructor -----
-            wsgiref.simple_server.WSGIServer.__init__ -> socketserver.BaseServer.__init__
+            # ----- Call super method -----
+            wsgiref.simple_server.WSGIServer -> socketserver.BaseServer.__init__
 
             # ----- Create socket -----
             socket.socket.__init__
@@ -17,28 +17,28 @@ __main__.main
             wsgiref.simple_server.WSGIServer.server_bind
 
                 # ----- Call super method -----
-                wsgiref.simple_server.WSGIServer.server_bind -> http.server.HTTPServer.server_bind
+                wsgiref.simple_server.WSGIServer -> http.server.HTTPServer.server_bind
 
                     # ----- Call super method -----
-                    wsgiref.simple_server.WSGIServer.server_bind -> socketserver.TCPServer.server_bind
+                    wsgiref.simple_server.WSGIServer -> socketserver.TCPServer.server_bind
 
-                        # ----- Bind socket to server address
-                        socket.socket.bind -> _socket.socket.bind
+                        # ----- Bind socket to server address -----
+                        socket.socket -> _socket.socket.bind
 
                 # ----- Call `setup_environ` -----
                 wsgiref.simple_server.WSGIServer.setup_environ
 
             # ----- Call `server_activate` -----
-            wsgiref.simple_server.WSGIServer.server_activate -> socketserver.TCPServer.server_activate
+            wsgiref.simple_server.WSGIServer -> socketserver.TCPServer.server_activate
 
                 # ----- Start listening socket -----
-                socket.socket.listen -> _socket.socket.listen
+                socket.socket -> _socket.socket.listen
 
         # ----- Call `set_app` -----
         wsgiref.simple_server.WSGIServer.set_app
 
     # ----- Call `serve_forever` -----
-    wsgiref.simple_server.WSGIServer.serve_forever -> socketserver.BaseServer.serve_forever
+    wsgiref.simple_server.WSGIServer -> socketserver.BaseServer.serve_forever
 
         # ----- Create selector -----
         selectors.SelectSelector.__init__
@@ -65,10 +65,10 @@ __main__.main
 
             # ----- Call `_handle_request_noblock` -----
             # When read event occurs, it means a client is connecting.
-            wsgiref.simple_server.WSGIServer._handle_request_noblock -> socketserver.BaseServer._handle_request_noblock
+            wsgiref.simple_server.WSGIServer -> socketserver.BaseServer._handle_request_noblock
 
                 # ----- Call `get_request` -----
-                wsgiref.simple_server.WSGIServer.get_request
+                wsgiref.simple_server.WSGIServer -> socketserver.TCPServer.get_request
 
                     # ----- Accept the connecting socket -----
                     socket.socket.accept
@@ -77,24 +77,27 @@ __main__.main
                         socket.socket.__init__
 
                 # ----- Call `verify_request` -----
-                wsgiref.simple_server.WSGIServer.verify_request -> socketserver.BaseServer.verify_request
+                wsgiref.simple_server.WSGIServer -> socketserver.BaseServer.verify_request
 
                 # ----- Call `process_request` -----
-                wsgiref.simple_server.WSGIServer.process_request -> socketserver.BaseServer.process_request
+                wsgiref.simple_server.WSGIServer -> socketserver.BaseServer.process_request
 
                     # ----- Call `finish_request` -----
-                    wsgiref.simple_server.WSGIServer.finish_request -> socketserver.BaseServer.finish_request
+                    wsgiref.simple_server.WSGIServer -> socketserver.BaseServer.finish_request
 
                         # ----- Create `self.RequestHandlerClass` instance -----
-                        # In this example, `self.RequestHandlerClass` is
-                        # `wsgiref.simple_server.WSGIRequestHandler`
-                        #
-                        wsgiref.simple_server.WSGIRequestHandler.__init__ -> socketserver.BaseRequestHandler.__init__
+                        wsgiref.simple_server.WSGIRequestHandler -> socketserver.BaseRequestHandler.__init__
 
                             # ----- Call `setup` -----
-                            wsgiref.simple_server.WSGIRequestHandler.setup -> socketserver.StreamRequestHandler.setup
+                            wsgiref.simple_server.WSGIRequestHandler -> socketserver.StreamRequestHandler.setup
 
                                 # ----- Create input file from the socket -----
+                                # Result is a `_io.BufferedReader` object
+                                # containing a `SocketIO` object.
+                                #
+                                # Notice `_io.BufferedReader.read` can not be
+                                # traced.
+                                #
                                 socket.socket.makefile
 
                                     # ----- Wrap the socket in `SocketIO` -----
@@ -112,91 +115,89 @@ __main__.main
                                 # ----- Read request line -----
                                 socket.SocketIO.readinto
 
-                                    # ----- Read from socket -----
-                                    socket.socket.recv_into -> _socket.socket.recv_into
-
                                 # ----- Call `parse_request` to parse headers -----
-                                wsgiref.simple_server.WSGIRequestHandler.parse_request -> http.server.BaseHTTPRequestHandler.parse_request
+                                wsgiref.simple_server.WSGIRequestHandler -> http.server.BaseHTTPRequestHandler.parse_request
 
-                                # ----- Get the stderr file to be passed to `wsgiref.simple_server.ServerHandler` -----
+                                # ----- Get the stderr file to be passed to WSGI server handler -----
                                 wsgiref.simple_server.WSGIRequestHandler.get_stderr
 
-                                # ----- Get the environ dict to be passed to `wsgiref.simple_server.ServerHandler` -----
+                                # ----- Get the environ dict to be passed to WSGI server handler -----
                                 wsgiref.simple_server.WSGIRequestHandler.get_environ
 
                                 # ----- Create WSGI server handler -----
-                                wsgiref.simple_server.ServerHandler.__init__ -> wsgiref.handlers.SimpleHandler.__init__
+                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler.__init__
 
                                 # ----- Get WSGI application  -----
                                 wsgiref.simple_server.WSGIServer.get_app
 
                                 # ----- Call `run` -----
-                                wsgiref.simple_server.ServerHandler.run -> wsgiref.handlers.BaseHandler.run
+                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.run
 
                                     # ----- Call `setup_environ` -----
-                                    wsgiref.simple_server.ServerHandler.setup_environ -> wsgiref.handlers.BaseHandler.setup_environ
+                                    wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.setup_environ
 
                                     # ----- Call WSGI application -----
-                                    __main__.CustomApp
+                                    __main__.CustomRequestHandler
 
                                         # ----- Read request body -----
+                                        # Not visible in log.
                                         _io.BufferedReader.read
 
                                         # ----- Set response status line and headers -----
-                                        wsgiref.simple_server.ServerHandler.start_response -> wsgiref.handlers.BaseHandler.start_response
+                                        wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.start_response
 
-                                        # ----- Return response body generator -----
+                                        # ----- Return response body iterator -----
 
                                 # ----- Call `finish_response` -----
-                                wsgiref.simple_server.ServerHandler.finish_response -> wsgiref.handlers.BaseHandler.finish_response
+                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.finish_response
 
                                     # ----- Call `write` -----
-                                    wsgiref.simple_server.ServerHandler.write -> wsgiref.handlers.BaseHandler.write
+                                    wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.write
 
                                         # ----- Call `send_headers` -----
-                                        wsgiref.simple_server.ServerHandler.send_headers -> wsgiref.handlers.BaseHandler.send_headers
+                                        wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.send_headers
 
                                             # ----- Call `cleanup_headers` -----
-                                            wsgiref.simple_server.ServerHandler.cleanup_headers -> wsgiref.handlers.BaseHandler.cleanup_headers
+                                            wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.cleanup_headers
 
                                             # ----- Call `send_preamble` -----
-                                            wsgiref.simple_server.ServerHandler.send_preamble -> wsgiref.handlers.BaseHandler.send_preamble
+                                            wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.send_preamble
 
                                                 # ----- Write status line -----
-                                                wsgiref.simple_server.ServerHandler._write -> wsgiref.handlers.SimpleHandler._write
+                                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._write
 
                                                 # ----- Write `Date` header -----
-                                                wsgiref.simple_server.ServerHandler._write -> wsgiref.handlers.SimpleHandler._write
+                                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._write
 
                                                 # ----- Write `Server` header -----
-                                                wsgiref.simple_server.ServerHandler._write -> wsgiref.handlers.SimpleHandler._write
+                                                wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._write
 
                                             # ----- Write `Content-Length` header -----
-                                            wsgiref.simple_server.ServerHandler._write -> wsgiref.handlers.SimpleHandler._write
+                                            wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._write
 
                                         # ----- Write response body -----
-                                        wsgiref.simple_server.ServerHandler._write -> wsgiref.handlers.SimpleHandler._write
+                                        wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._write
 
                                         # ----- Call `_flush` -----
-                                        wsgiref.simple_server.ServerHandler._flush -> wsgiref.handlers.SimpleHandler._flush
+                                        wsgiref.simple_server.ServerHandler -> wsgiref.handlers.SimpleHandler._flush
 
-                                            # ----- Flush `SocketIO` -----
-                                            socket.SocketIO.flush -> _io._IOBase.flush
+                                            # ----- Write to output `SocketIO` -----
+                                            socket.SocketIO.write
 
                                     # ----- Call `finish_content` -----
-                                    wsgiref.simple_server.ServerHandler.finish_content -> wsgiref.handlers.BaseHandler.finish_content
+                                    wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.finish_content
 
                                     # ----- Call `close` -----
                                     wsgiref.simple_server.ServerHandler.close
 
-                                        # ----- Call super `close` -----
-                                        wsgiref.simple_server.ServerHandler.close -> wsgiref.handlers.BaseHandler.close
+                                        # ----- Call super method -----
+                                        wsgiref.simple_server.ServerHandler -> wsgiref.handlers.BaseHandler.close
 
                             # ----- Call `finish` -----
-                            wsgiref.simple_server.WSGIRequestHandler.finish -> socketserver.StreamRequestHandler.finish
+                            wsgiref.simple_server.WSGIRequestHandler -> socketserver.StreamRequestHandler.finish
 
                                 # ----- Flush stdout `SocketIO` -----
-                                socket.SocketIO.flush -> _io._IOBase.flush
+                                socket.SocketIO -> _io._IOBase.flush
 
                                 # ----- Close stdout `SocketIO` -----
                                 socket.SocketIO.close
@@ -205,13 +206,13 @@ __main__.main
                                 socket.SocketIO.close
 
                     # ----- Call `shutdown_request` -----
-                    wsgiref.simple_server.WSGIServer.shutdown_request -> SocketServer.TCPServer.shutdown_request
+                    wsgiref.simple_server.WSGIServer -> SocketServer.TCPServer.shutdown_request
 
                         # ----- Close write channel -----
-                        socket.socket.shutdown -> _socket.socket.shutdown
+                        socket.socket -> _socket.socket.shutdown
 
                         # ----- Call `close_request` -----
-                        wsgiref.simple_server.WSGIServer.close_request -> SocketServer.TCPServer.close_request
+                        wsgiref.simple_server.WSGIServer -> SocketServer.TCPServer.close_request
 
                             # ----- Close socket -----
                             socket.socket.close
