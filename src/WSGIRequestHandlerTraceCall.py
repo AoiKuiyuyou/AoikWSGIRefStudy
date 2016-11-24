@@ -1,17 +1,22 @@
 # coding: utf-8
 from __future__ import absolute_import
 
+# Standard imports
+import sys
+import logging
+
+# External imports
 import aoiktracecall.config
+import aoiktracecall.logging
 import aoiktracecall.trace
 
 
-# Only `aoiktracecall` modules are imported here.
-# Other modules should be imported after `trace_calls_in_specs` is called.
+# Traced modules should be imported after `trace_calls_in_specs` is called.
 
 
 # Set configs
 aoiktracecall.config.set_configs({
-    # Whether wrap callables using wrapper class instead of wrapper function.
+    # Whether use wrapper class.
     #
     # Wrapper class is more adaptive to various types of callables but will
     # break if the code that was using the original function requires a real
@@ -46,10 +51,43 @@ aoiktracecall.config.set_configs({
     # Whether show function's file path and line number in post-call hook
     'SHOW_FUNC_FILE_PATH_LINENO_POST_CALL': False,
 
-    # Whether show `printing_handler`'s debug info
-    'PRINTING_HANDLER_SHOW_DEBUG_INFO': False,
+    # Whether wrapper function should debug info dict's URIs
+    'WRAPPER_FUNC_DEBUG_INFO_DICT_URIS': False,
+
+    # Whether printing handler should debug arguments inspect info
+    'PRINTING_HANDLER_DEBUG_ARGS_INSPECT_INFO': False,
+
+    # Whether printing handler should debug info dict.
+    #
+    # Notice info dict contains called function's arguments and printing these
+    # arguments may cause errors.
+    #
+    'PRINTING_HANDLER_DEBUG_INFO_DICT': False,
+
+    # Whether printing handler should debug info dict, excluding arguments.
+    #
+    # Use this if `PRINTING_HANDLER_DEBUG_INFO_DICT` causes errors.
+    #
+    'PRINTING_HANDLER_DEBUG_INFO_DICT_SAFE': False,
 })
 
+
+# Add debug logger handler
+aoiktracecall.logging.get_debug_logger().addHandler(logging.NullHandler())
+
+# Add info logger handler
+aoiktracecall.logging.get_info_logger().addHandler(
+    logging.StreamHandler(sys.stdout)
+)
+
+# Add error logger handler
+aoiktracecall.logging.get_error_logger().addHandler(
+    logging.StreamHandler(sys.stderr)
+)
+
+
+# Constant for `highlight`
+HL = 'highlight'
 
 # Create trace specs.
 #
@@ -62,7 +100,6 @@ aoiktracecall.config.set_configs({
 #
 trace_specs = [
     # ----- aoiktracecall -----
-    # Not trace `aoiktracecall`
     ('aoiktracecall([.].+)?', False),
 
     # ----- * -----
@@ -75,19 +112,7 @@ trace_specs = [
     # `__str__` or `__repr__` may cause infinite recursion.
     ('.+[.]__(?!init|call)[^.]+__', False),
 
-    # ----- socket.SocketIO (Python 3) -----
-    # Highlight
-    ('socket[.]SocketIO[.](__init__|readinto|write|flush|close)', {
-        'highlight'
-    }),
-
-    # Hide details
-    ('socket.SocketIO.fileno', False),
-
-    # Show all
-    ('socket[.]SocketIO[.].+', True),
-
-    # ----- socket -----
+    # ----- socket._socketobject (Python 2), socket.socket (Python 3) -----
     # Notice in Python 2, class `socket._socketobject`'s instance methods
     # - recv
     # - recvfrom
@@ -98,92 +123,206 @@ trace_specs = [
     # are dynamically generated in `_socketobject.__init__`. The approach of
     # wrapping class attributes is unable to trace these methods.
 
-    # Hide details
-    ('socket[.].+[.]fileno', False),
+    ('socket[.](_socketobject|socket)[.]__init__', HL),
 
-    # Hide details.
-    # This function is in Python 3.
+    ('socket[.](_socketobject|socket)[.]bind', HL),
+
+    ('socket[.](_socketobject|socket)[.]listen', HL),
+
+    ('socket[.](_socketobject|socket)[.]connect', HL),
+
+    ('socket[.](_socketobject|socket)[.]accept', HL),
+
+    ('socket[.](_socketobject|socket)[.]setblocking', HL),
+
+    ('socket[.](_socketobject|socket)[.]makefile', HL),
+
+    ('socket[.](_socketobject|socket)[.]recv.*', HL),
+
+    ('socket[.](_socketobject|socket)[.]send.*', HL),
+
+    ('socket[.](_socketobject|socket)[.]shutdown', HL),
+
+    ('socket[.](_socketobject|socket)[.]close', HL),
+
+    # ----- socket._fileobject (Python 2), socket.SocketIO (Python 3) -----
+    ('socket[.](SocketIO|_fileobject)[.]__init__', HL),
+
+    ('socket[.](SocketIO|_fileobject)[.]read.*', HL),
+
+    ('socket[.](SocketIO|_fileobject)[.]write.*', HL),
+
+    ('socket[.](SocketIO|_fileobject)[.]flush', HL),
+
+    ('socket[.](SocketIO|_fileobject)[.]close', HL),
+
+    ('socket[.](SocketIO|_fileobject)[.].+', True),
+
+    # ----- socket -----
     ('socket._intenum_converter', False),
 
-    # Hide to avoid infinite recursion in `__repr__` in Python 3
+    ('socket[.].+[.]_decref_socketios', False),
+
+    ('socket[.].+[.]fileno', False),
+
+    # Ignore to avoid error in `__repr__` in Python 3
     ('socket[.].+[.]getpeername', False),
 
-    # Hide to avoid infinite recursion in `__repr__` in Python 3
+    # Ignore to avoid error in `__repr__` in Python 3
     ('socket[.].+[.]getsockname', False),
 
-    # Highlight all
-    ('socket([.].+)?', {'highlight'}),
+    ('socket[.].+[.]gettimeout', False),
+
+    ('socket([.].+)?', True),
 
     # ----- select (Python 2) -----
-    # Highlight
-    ('select.select', {'highlight'}),
+    ('select.select', HL),
 
-    # Show all
     ('select([.].+)?', True),
 
     # ----- selectors (Python 3) -----
-    # Highlight
-    ('selectors[.].+[.](__init__|register|select|_select)', {'highlight'}),
+    ('selectors.SelectSelector.__init__', HL),
 
-    # Show all
+    ('selectors.SelectSelector.register', HL),
+
+    ('selectors.SelectSelector.select', HL),
+
     ('selectors([.].+)?', True),
 
     # ----- SocketServer (Python 2), socketserver (Python 3) -----
-    # Hide details
     ('SocketServer._eintr_retry', False),
 
-    # Hide details
-    ('socketserver[.].+[.]service_actions', False),
+    ('(socketserver|SocketServer)[.]BaseServer[.]__init__', HL),
 
-    # Hide details
-    ('(socketserver|SocketServer)[.].+[.]fileno', False),
+    ('(socketserver|SocketServer)[.]TCPServer[.]__init__', HL),
 
-    # Highlight all
-    ('(socketserver|SocketServer)([.].+)?', {'highlight'}),
+    ('(socketserver|SocketServer)[.]ThreadingMixIn[.]process_request', HL),
+
+    (
+        '(socketserver|SocketServer)[.]ThreadingMixIn[.]'
+        'process_request_thread', HL
+    ),
+
+    # Ignore to avoid error:
+    # ```
+    # 'WSGIServer' object has no attribute '_BaseServer__is_shut_down'
+    # ```
+    ('(socketserver|SocketServer)[.]ThreadingMixIn[.].+', False),
+
+    ('(socketserver|SocketServer)[.]BaseRequestHandler[.]__init__', HL),
+
+    ('(socketserver|SocketServer)[.].+[.]service_actions', False),
+
+    ('.+[.]server_bind', HL),
+
+    ('.+[.]server_activate', HL),
+
+    ('.+[.]serve_forever', HL),
+
+    ('.+[.]_handle_request_noblock', HL),
+
+    ('.+[.]get_request', HL),
+
+    ('.+[.]verify_request', HL),
+
+    ('.+[.]process_request', HL),
+
+    ('.+[.]process_request_thread', HL),
+
+    ('.+[.]finish_request', HL),
+
+    ('.+[.]setup', HL),
+
+    ('.+[.]handle', HL),
+
+    ('.+[.]finish', HL),
+
+    ('.+[.]shutdown_request', HL),
+
+    ('.+[.]close_request', HL),
+
+    ('.+[.]fileno', False),
+
+    ('(socketserver|SocketServer)([.].+)?', True),
 
     # ----- mimetools -----
     # `mimetools` is used for parsing HTTP headers in Python 2.
 
-    # Highlight all
-    ('mimetools([.].+)?', {'highlight'}),
+    ('mimetools([.].+)?', True),
 
     # ----- email -----
     # `email` is used for parsing HTTP headers in Python 3.
 
-    # Highlight all
-    ('email([.].+)?', {'highlight'}),
+    ('email([.].+)?', True),
 
     # ----- BaseHTTPServer (Python 2), http.server (Python 3) -----
-    # Hide details
-    ('(BaseHTTPServer|http[.]server)[.].+[.](parse_request|log_request)', {
-        'highlight', 'hide_below'
-    }),
+    ('.+[.]handle_one_request', HL),
+
+    ('.+[.]parse_request', HL, 'hide_below'),
+
+    ('.+[.]send_response', HL),
+
+    ('.+[.]send_header', HL),
+
+    ('.+[.]end_headers', HL),
 
     # ----- BaseHTTPServer (Python 2) -----
-    # Highlight all
-    ('BaseHTTPServer([.].+)?', {'highlight'}),
+    ('BaseHTTPServer([.].+)?', True),
 
     # ----- http (Python 3) -----
-    # Highlight all
-    ('http([.].+)?', {'highlight'}),
+    ('http([.].+)?', True),
 
     # ----- wsgiref -----
-    # Hide details
-    ('wsgiref.simple_server.ServerHandler.setup_environ', {
-        'highlight', 'hide_below'
-    }),
+    ('wsgiref.handlers.BaseHandler.write', HL),
 
-    # Hide details
-    ('wsgiref.simple_server.WSGIRequestHandler.get_environ', {
-        'highlight', 'hide_below'
-    }),
+    ('wsgiref.handlers.BaseHandler.close', HL),
 
-    # Highlight all
-    ('wsgiref([.].+)?', {'highlight'}),
+    ('wsgiref.handlers.SimpleHandler.__init__', HL),
+
+    ('wsgiref.handlers.SimpleHandler._write', HL),
+
+    ('wsgiref.handlers.SimpleHandler._flush', HL),
+
+    ('wsgiref.simple_server.WSGIServer.__init__', HL),
+
+    ('wsgiref.simple_server.ServerHandler.__init__', HL),
+
+    ('wsgiref.simple_server.ServerHandler.close', HL),
+
+    ('.+[.]make_server', HL),
+
+    ('.+[.]setup_environ', HL, 'hide_below'),
+
+    ('.+[.]set_app', HL),
+
+    ('.+[.]get_environ', HL, 'hide_below'),
+
+    ('.+[.]get_app', HL),
+
+    ('.+[.]run', HL),
+
+    ('.+[.]start_response', HL),
+
+    ('.+[.]finish_response', HL),
+
+    ('.+[.]send_headers', HL),
+
+    ('.+[.]cleanup_headers', HL),
+
+    ('.+[.]send_preamble', HL),
+
+    ('.+[.]finish_content', HL),
+
+    ('.+[.]finish', HL),
+
+    ('wsgiref([.].+)?', True),
 
     # ----- __main__ -----
-    # Highlight all
-    ('__main__([.].+)?', {'highlight'}),
+    ('__main__.main', HL),
+
+    ('__main__.CustomRequestHandler', HL),
+
+    ('__main__([.].+)?', True),
 ]
 
 
@@ -193,14 +332,14 @@ def printing_handler_filter_func(info):
     onwrap_uri = info['onwrap_uri']
 
     # If is this URI
-    if onwrap_uri == '__main__.CustomApp':
+    if onwrap_uri == '__main__.CustomRequestHandler':
         # Get arguments inspect info
         arguments_inspect_info = info['arguments_inspect_info']
 
         # Get `environ` argument info
         arg_info = arguments_inspect_info.fixed_arg_infos['environ']
 
-        # Hide details
+        # Hide value
         arg_info.value = '{...}'
 
     # Return info dict
@@ -233,9 +372,9 @@ from wsgiref.simple_server import WSGIRequestHandler
 from wsgiref.simple_server import WSGIServer
 
 
-def CustomApp(environ, start_response):
+def CustomRequestHandler(environ, start_response):
     """
-    This WSGI application echoes request body in response body.
+    This request handler echoes request body in response body.
     """
     # Get `Context-Length` header value
     content_length_text = environ['CONTENT_LENGTH']
@@ -269,7 +408,7 @@ def main():
         server = make_server(
             host='127.0.0.1',
             port=8000,
-            app=CustomApp,
+            app=CustomRequestHandler,
             server_class=WSGIServer,
             handler_class=WSGIRequestHandler,
         )
